@@ -27,41 +27,50 @@ const getTeam = async (teamQuery) => {
     let teamRoster = {};
 
     // // Get Roster Real Names
-    // teamProfile.$(".team-roster-item-name-real").each((i, elm) => {
-    //   teamRoster[i] = {
-    //     name: elm.children[0].data.replace(/[\t\n]+/g, ""),
-    //   };
-    // });
+    teamProfile.$(".team-roster-item-name-real").each((i, elm) => {
+      teamRoster[i] = {
+        name: elm.children[0].data.replace(/[\t\n]+/g, ""),
+      };
+    });
 
-    // // Get Roster Aliases
-    // teamProfile.$(".team-roster-item-name-alias").each((i, elm) => {
-    //   teamRoster[i].alias = elm.children[2].data.replace(/[\t\n]+/g, "");
-    // });
-
-    // for (i = 0; i < array.length; i++) {
-
-    // }
+    // Get Roster Aliases
+    teamProfile.$(".team-roster-item-name-alias").each((i, elm) => {
+      teamRoster[i].nickname = elm.children[2].data.replace(/[\t\n]+/g, "");
+    });
 
     let completedURL =
       "https://vlr.gg/team/matches/" +
       profileURL.split("/")[4] +
       "?group=completed";
     let completedMatches = await scrapper.get(completedURL);
+    let teamName = teamProfile.$(".team-header-name h1").text();
 
     let cMatches = {};
 
-    // Get Match Name
+    // Get Completed Match's ID
+    completedMatches.$("a.wf-module-item.mod-flex.rm-item").each((i, elm) => {
+      if (i > 4) return false;
+      cMatches[i] = {
+        id: elm.attribs.href.split("/")[1],
+      };
+    });
+
+    // Get Completed Match's URL
+    completedMatches.$("a.wf-module-item.mod-flex.rm-item").each((i, elm) => {
+      if (i > 4) return false;
+      cMatches[i].url = "https://www.vlr.gg" + elm.attribs.href;
+    });
+
+    // Get Completed Match's Name
     completedMatches
       .$(":not(.mod-tbd) .rm-item-event")
       .children('.text-of[style="font-weight: 500; margin-bottom: 4px;"]')
       .each((i, elm) => {
         if (i > 4) return false;
-        cMatches[i] = {
-          name: elm.children[0].data.replace(/[\t\n]+/g, ""),
-        };
+        cMatches[i].name = elm.children[0].data.replace(/[\t\n]+/g, "");
       });
 
-    // Get Event Name
+    // Get Completed Match's Event Name
     completedMatches
       .$(":not(.mod-tbd) .rm-item-event")
       .children(".rm-item-event-series")
@@ -70,7 +79,7 @@ const getTeam = async (teamQuery) => {
         cMatches[i].event = elm.children[0].data.replace(/[\t\n]+/g, "");
       });
 
-    // Get Match Opponent
+    // Get Completed Match's Opponent
     completedMatches
       .$(":not(.mod-tbd) .rm-item-opponent")
       .children(".text-of")
@@ -79,7 +88,7 @@ const getTeam = async (teamQuery) => {
         cMatches[i].opponent = elm.children[0].data.replace(/[\t\n]+/g, "");
       });
 
-    // Get Match Date
+    // Get Completed Match's Date
     completedMatches.$(":not(.mod-tbd) .rm-item-date").each((i, elm) => {
       if (i > 4) return false;
       cMatches[i].date =
@@ -87,16 +96,17 @@ const getTeam = async (teamQuery) => {
         `${elm.children[0].data.replace(/[\t\n]+/g, "")}`;
     });
 
-    // Get Score of Queried Team
+    // Get Score of Queried Team in Completed Match
     completedMatches.$(":not(.mod-tbd) .rf").each((i, elm) => {
       if (i > 4) return false;
-      cMatches[i].score = { self: elm.children[0].data };
+      cMatches[i].score = {};
+      cMatches[i].score[teamName] = elm.children[0].data;
     });
 
-    // Get Score of Opponent Team
+    // Get Score of Opponent Team in Completed Match
     completedMatches.$(":not(.mod-tbd) .ra").each((i, elm) => {
       if (i > 4) return false;
-      cMatches[i].score.opponent = elm.children[0].data;
+      cMatches[i].score[`${cMatches[i].opponent}`] = elm.children[0].data;
     });
 
     let result = {
@@ -107,15 +117,15 @@ const getTeam = async (teamQuery) => {
         logo: teamProfile.$(".team-header-logo div img").attr("src"),
         url: profileURL,
         id: profileURL.split("/")[4],
-      },
-      roster: teamRoster,
-      stats: {
-        totalWinnings: teamProfile
-          .$('span[style="font-size: 22px; font-weight: 500;"]')
-          .text()
-          .replace(/[\t\n]+/g, ""),
-        upcomingMatches: {},
-        completedMatches: cMatches,
+        roster: teamRoster,
+        stats: {
+          totalWinnings: teamProfile
+            .$('span[style="font-size: 22px; font-weight: 500;"]')
+            .text()
+            .replace(/[\t\n]+/g, ""),
+          upcomingMatches: {},
+          completedMatches: cMatches,
+        },
       },
     };
     return result;
