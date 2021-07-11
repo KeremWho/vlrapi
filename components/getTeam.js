@@ -26,16 +26,68 @@ const getTeam = async (teamQuery) => {
 
     let teamRoster = {};
 
+    // Get Roster Aliases
+    teamProfile.$(".team-roster-item-name-alias").each((i, elm) => {
+      teamRoster[i] = {
+        nickname: elm.children[0].data.replace(/[\t\n]+/g, ""),
+      };
+      teamRoster[i].nickname = elm.children[2].data.replace(/[\t\n]+/g, "");
+    });
+
     // // Get Roster Real Names
     teamProfile.$(".team-roster-item-name-real").each((i, elm) => {
-      teamRoster[i] = {
-        name: elm.children[0].data.replace(/[\t\n]+/g, ""),
+      teamRoster[i].name = elm.children[0].data.replace(/[\t\n]+/g, "");
+    });
+
+    let upcomingURL =
+      "https://vlr.gg/team/matches/" +
+      profileURL.split("/")[4] +
+      "?group=upcoming";
+    let upcomingMatches = await scrapper.get(upcomingURL);
+
+    let uMatches = {};
+
+    // Get Upcoming Match's ID
+    upcomingMatches.$("a.wf-module-item.mod-flex.rm-item").each((i, elm) => {
+      uMatches[i] = {
+        id: elm.attribs.href.split("/")[1],
       };
     });
 
-    // Get Roster Aliases
-    teamProfile.$(".team-roster-item-name-alias").each((i, elm) => {
-      teamRoster[i].nickname = elm.children[2].data.replace(/[\t\n]+/g, "");
+    // Get Upcoming Match's URL
+    upcomingMatches.$("a.wf-module-item.mod-flex.rm-item").each((i, elm) => {
+      uMatches[i].url = "https://www.vlr.gg" + elm.attribs.href;
+    });
+
+    // Get Upcoming Match's Name
+    upcomingMatches
+      .$(":not(.mod-tbd) .rm-item-event")
+      .children('.text-of[style="font-weight: 500; margin-bottom: 4px;"]')
+      .each((i, elm) => {
+        uMatches[i].name = elm.children[0].data.replace(/[\t\n]+/g, "");
+      });
+
+    // Get Upcoming Match's Event Name
+    upcomingMatches
+      .$(":not(.mod-tbd) .rm-item-event")
+      .children(".rm-item-event-series")
+      .each((i, elm) => {
+        uMatches[i].event = elm.children[0].data.replace(/[\t\n]+/g, "");
+      });
+
+    // Get Upcoming Match's Opponent
+    upcomingMatches
+      .$(":not(.mod-tbd) .rm-item-opponent")
+      .children(".text-of")
+      .each((i, elm) => {
+        uMatches[i].opponent = elm.children[0].data.replace(/[\t\n]+/g, "");
+      });
+
+    // Get Upcoming Match's Date
+    upcomingMatches.$(":not(.mod-tbd) .rm-item-date").each((i, elm) => {
+      uMatches[i].date =
+        `${elm.children[0].next.next.data.replace(/[\t\n]+/g, "")} ` +
+        `${elm.children[0].data.replace(/[\t\n]+/g, "")}`;
     });
 
     let completedURL =
@@ -118,12 +170,42 @@ const getTeam = async (teamQuery) => {
         url: profileURL,
         id: profileURL.split("/")[4],
         roster: teamRoster,
+        rating: {
+          region: teamProfile
+            .$(".rating-txt.ge-text")
+            .text()
+            .replace(/[\t\n]+/g, ""),
+          currentRank: teamProfile
+            .$("div.rank-num")
+            .text()
+            .replace(/[\t\n]+/g, ""),
+          currentPoints: teamProfile
+            .$(".team-rating-info-section.mod-rating .rating-num")
+            .text()
+            .split("\n")[1]
+            .replace(/[\t\n]+/g, ""),
+          maxPoints: teamProfile
+            .$(".team-rating-info-section.mod-rating .rating-num")
+            .text()
+            .split("\n")[2]
+            .replace(/[\t\n]+/g, ""),
+          currentStreak: teamProfile
+            .$(".team-rating-info-section.mod-streak .rating-num")
+            .text()
+            .split(" ")[0]
+            .replace(/[\t\n]+/g, ""),
+          bestStreak: teamProfile
+            .$(".team-rating-info-section.mod-streak .rating-num")
+            .text()
+            .split(" ")[1]
+            .replace(/[\t\n]+/g, ""),
+        },
         stats: {
           totalWinnings: teamProfile
             .$('span[style="font-size: 22px; font-weight: 500;"]')
             .text()
             .replace(/[\t\n]+/g, ""),
-          upcomingMatches: {},
+          upcomingMatches: uMatches,
           completedMatches: cMatches,
         },
       },
